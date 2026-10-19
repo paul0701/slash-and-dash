@@ -12,6 +12,8 @@ API (same for every game, change `game`):
 - POST /api/sync           {game, best, theme, week, week_best} (Bearer token) – best score wins, returns rank + week_rank
 - GET  /api/leaderboard?game=slashdash&period=all|week  (weekly board resets Monday 00:00 UTC)
 
+PIN recovery (optional): create a free account at resend.com, then add `RESEND_API_KEY` and `RESEND_FROM` (for example `Slash and Dash <noreply@yourdomain>`) as environment variables and redeploy. Without them the Forgot your PIN button tells players recovery is not switched on yet; everything else still works. Players add an email when they create an account, or later with the Recovery email button.
+
 Local check of the functions: `npm install` then `node tests/local.test.mjs`.
 
 GitHub Pages only serves static files, so sign-in/leaderboard only work on the Netlify copy. The game still plays fully offline everywhere.

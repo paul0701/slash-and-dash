@@ -1,4 +1,4 @@
-import { players, fail, json, hashPin, userOut, readBody, currentUser, checkPin, setupError, NAME_RE, PIN_RE } from "../lib/core.mjs";
+import { players, fail, json, hashPin, userOut, readBody, currentUser, checkPin, setupError, cleanEmail, NAME_RE, PIN_RE } from "../lib/core.mjs";
 
 async function changePin(req) {
   const me = await currentUser(req);
@@ -20,16 +20,18 @@ export default async (req) => {
   const path = new URL(req.url).pathname;
   if (path.endsWith("/change-pin")) return changePin(req);
   const action = path.endsWith("/register") ? "register" : "login";
-  const { username = "", pin = "" } = await readBody(req);
+  const { username = "", pin = "", email = "" } = await readBody(req);
   if (!NAME_RE.test(username)) return fail(400, "Username must be 3-16 letters, numbers or _");
   if (!PIN_RE.test(pin)) return fail(400, "PIN must be exactly 6 digits");
+  const mail = action === "register" ? cleanEmail(email) : "";
+  if (mail === null) return fail(400, "That email address does not look right");
   const key = username.toLowerCase();
   const store = players();
   const user = await store.get(key, { type: "json" });
 
   if (action === "register") {
     if (user) return fail(409, "That username is taken");
-    const fresh = { username, ...hashPin(pin), games: {}, fails: 0, lockUntil: 0, createdAt: new Date().toISOString() };
+    const fresh = { username, ...hashPin(pin), games: {}, fails: 0, lockUntil: 0, createdAt: new Date().toISOString(), email: mail || null };
     await store.setJSON(key, fresh);
     return json(201, userOut(key, fresh));
   }

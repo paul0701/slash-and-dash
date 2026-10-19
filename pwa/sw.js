@@ -1,4 +1,4 @@
-var CACHE = 'slashdash-v10';
+var CACHE = 'slashdash-v11';
 var CORE = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 
 var FONT_CSS = 'https://fonts.googleapis.com/css2?family=Creepster&display=swap';

@@ -133,11 +133,13 @@ canvas {
 .sheet input { display: block; width: 100%; box-sizing: border-box; margin-top: 6px; padding: 12px 14px; font-size: 18px; border-radius: 10px; border: 2px solid #3a4070; background: #0b0d1a; color: #fff; }
 .sheet input:focus { outline: none; border-color: #ff8a2a; }
 .sheet .err { color: #ff7b7b; min-height: 18px; margin: 0 0 10px; }
+.sheet .err.ok { color: #7bd9a4; }
 .sheet .row { display: flex; gap: 10px; }
 .sheet .row button, .sheet .wide { flex: 1; padding: 12px; border-radius: 12px; border: 0; font-size: 16px; font-weight: 600; cursor: pointer; color: #fff; }
 .sheet .primary { background: #b3261e; }
 .sheet .secondary { background: #2f6f4f; }
 .sheet .link { display: block; margin: 12px auto 0; background: none; border: 0; color: #c9c3e6; font-size: 14px; cursor: pointer; text-decoration: underline; }
+.sheet .fine { font-size: 12px; opacity: 0.7; margin: -4px 0 12px; }
 .sheet button:disabled { opacity: 0.5; cursor: default; }
 .sheet .wide { display: block; width: 100%; }
 .tabs { display: flex; gap: 6px; margin: 4px 0 12px; padding: 4px; background: rgba(255,255,255,0.06); border-radius: 12px; }
@@ -201,6 +203,7 @@ canvas {
     <span id="acctStatus" class="status" data-testid="account-status">Not signed in. Scores save on this device only.</span>
     <button id="acctBtn" class="themebtn" data-testid="account-button" type="button">Sign in to sync</button>
     <button id="pinBtn" class="themebtn" data-testid="change-pin-button" type="button" hidden>Change PIN</button>
+    <button id="emailBtn" class="themebtn" data-testid="recovery-email-button" type="button" hidden>Recovery email</button>
     <button id="lbBtn" class="themebtn" data-testid="leaderboard-button" type="button">Leaderboard</button>
   </div>
   <p class="hint">Keyboard: Space or Up to jump, X or Right arrow to slash. On a touchscreen, use the buttons or tap the left and right halves of the game. Jump up to grab floating power-ups. Tap Theme to cycle Halloween, Xmas and Rainy Night.</p>
@@ -216,11 +219,16 @@ canvas {
     <label>6-digit PIN
       <input id="uPin" data-testid="auth-pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" placeholder="••••••">
     </label>
+    <label>Email for PIN recovery (optional)
+      <input id="uEmail" data-testid="auth-email-input" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="254" placeholder="you@example.com">
+    </label>
+    <p class="fine">Only used to email you a code if you forget your PIN. Add it when you create your account, or later from the Recovery email button.</p>
     <p id="authErr" class="err" data-testid="auth-error" role="alert"></p>
     <div class="row">
       <button id="loginBtn" class="secondary" data-testid="auth-login-button" type="submit">Sign in</button>
       <button id="regBtn" class="primary" data-testid="auth-register-button" type="button">Create account</button>
     </div>
+    <button id="forgotBtn" class="link" data-testid="auth-forgot-button" type="button">Forgot your PIN?</button>
     <button id="authClose" class="link" data-testid="auth-close-button" type="button">Cancel</button>
   </form>
 </div>
@@ -241,6 +249,45 @@ canvas {
     <p id="pinErr" class="err" data-testid="pin-error" role="alert"></p>
     <button id="pinSave" class="primary wide" data-testid="pin-save-button" type="submit">Save new PIN</button>
     <button id="pinClose" class="link" data-testid="pin-close-button" type="button">Cancel</button>
+  </form>
+</div>
+
+<div id="recModal" class="modal" hidden data-testid="recover-modal">
+  <form class="sheet" id="recForm" novalidate>
+    <h2>Forgot PIN</h2>
+    <p id="recIntro">Enter your username and we will email a 6-digit code to the address saved on your account.</p>
+    <label>Username
+      <input id="rName" data-testid="recover-username-input" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="16">
+    </label>
+    <div id="recStep2" hidden>
+      <label>Code from the email
+        <input id="rCode" class="pin" data-testid="recover-code-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code">
+      </label>
+      <label>New PIN
+        <input id="rPin" class="pin" data-testid="recover-newpin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password">
+      </label>
+    </div>
+    <p id="recErr" class="err" data-testid="recover-error" role="alert"></p>
+    <button id="recGo" class="primary wide" data-testid="recover-go-button" type="submit">Email me a code</button>
+    <button id="recHave" class="link" data-testid="recover-have-code-button" type="button">I already have a code</button>
+    <button id="recClose" class="link" data-testid="recover-close-button" type="button">Cancel</button>
+  </form>
+</div>
+
+<div id="emModal" class="modal" hidden data-testid="email-modal">
+  <form class="sheet" id="emForm" novalidate>
+    <h2>Recovery email</h2>
+    <p id="emNow">Checking…</p>
+    <label>Email address
+      <input id="emIn" data-testid="email-input" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="254" placeholder="you@example.com">
+    </label>
+    <label>Your PIN
+      <input id="emPin" class="pin" data-testid="email-pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password">
+    </label>
+    <p class="fine">Leave the email empty and save to remove it.</p>
+    <p id="emErr" class="err" data-testid="email-error" role="alert"></p>
+    <button id="emSave" class="primary wide" data-testid="email-save-button" type="submit">Save</button>
+    <button id="emClose" class="link" data-testid="email-close-button" type="button">Cancel</button>
   </form>
 </div>
 
@@ -1995,6 +2042,7 @@ canvas {
     var a = getAuth();
     acctBtn.textContent = a ? 'Sign out' : 'Sign in to sync';
     $('pinBtn').hidden = !a;
+    $('emailBtn').hidden = !a;
     if (!a) status('Not signed in. Scores save on this device only.');
   }
 
@@ -2082,13 +2130,15 @@ canvas {
     if (!navigator.onLine) { errEl.textContent = 'You are offline. Connect once to sign in.'; return; }
     errEl.textContent = '';
     $('loginBtn').disabled = $('regBtn').disabled = true;
-    api('/auth/' + mode, 'POST', { username: username, pin: pin })
+    var email = mode === 'register' ? $('uEmail').value.trim() : '';
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = 'That email address does not look right'; $('loginBtn').disabled = $('regBtn').disabled = false; return; }
+    api('/auth/' + mode, 'POST', { username: username, pin: pin, email: email })
       .then(function (r) {
         setAuth({ token: r.token, username: r.username });
         var g = (r.games || {})[GAME];
         if (g && g.theme) G.setTheme(g.theme);
         if (g && g.best > G.best()) G.setBest(g.best);
-        $('uPin').value = '';
+        $('uPin').value = ''; $('uEmail').value = '';
         closeModal(authModal);
         refreshBar();
         push();
@@ -2128,6 +2178,100 @@ canvas {
       })
       .catch(function (err) { pinErr.textContent = (err && err.msg) || 'Could not reach the server. Try again.'; })
       .then(function () { $('pinSave').disabled = false; });
+  });
+
+  // ---- forgot PIN ----
+  var recModal = $('recModal'), recErr = $('recErr'), recStep = 1;
+  function recSetStep(n) {
+    recStep = n;
+    $('recStep2').hidden = n === 1;
+    $('recGo').textContent = n === 1 ? 'Email me a code' : 'Set new PIN';
+    $('recHave').hidden = n === 2;
+    $('rName').readOnly = n === 2;
+  }
+  function openRecover() {
+    recErr.textContent = ''; recErr.className = 'err';
+    $('rCode').value = $('rPin').value = '';
+    $('rName').value = $('uName').value.trim();
+    recSetStep(1);
+    closeModal(authModal);
+    openModal(recModal);
+    $('rName').focus();
+  }
+  $('forgotBtn').addEventListener('click', openRecover);
+  $('recClose').addEventListener('click', function () { closeModal(recModal); });
+  $('recHave').addEventListener('click', function () {
+    if (!/^[A-Za-z0-9_]{3,16}$/.test($('rName').value.trim())) { recErr.className = 'err'; recErr.textContent = 'Enter your username first'; return; }
+    recErr.textContent = ''; recSetStep(2); $('rCode').focus();
+  });
+  $('recForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var username = $('rName').value.trim();
+    recErr.className = 'err';
+    if (!/^[A-Za-z0-9_]{3,16}$/.test(username)) { recErr.textContent = 'Enter your username'; return; }
+    if (!navigator.onLine) { recErr.textContent = 'You are offline. Connect to recover your PIN.'; return; }
+    if (recStep === 1) {
+      $('recGo').disabled = true;
+      api('/auth/forgot', 'POST', { username: username })
+        .then(function (r) {
+          recSetStep(2);
+          recErr.className = 'err ok';
+          recErr.textContent = r.message || 'If that username has an email saved, a code is on its way.';
+          $('rCode').focus();
+        })
+        .catch(function (err) { recErr.textContent = (err && err.msg) || 'Could not reach the server. Try again.'; })
+        .then(function () { $('recGo').disabled = false; });
+      return;
+    }
+    var code = $('rCode').value.trim(), pin = $('rPin').value.trim();
+    if (!/^\d{6}$/.test(code)) { recErr.textContent = 'The code is the 6 digits in the email'; return; }
+    if (!/^\d{6}$/.test(pin)) { recErr.textContent = 'New PIN must be exactly 6 digits'; return; }
+    $('recGo').disabled = true;
+    api('/auth/reset', 'POST', { username: username, code: code, pin: pin })
+      .then(function (r) {
+        setAuth({ token: r.token, username: r.username });
+        var g = (r.games || {})[GAME];
+        if (g && g.theme) G.setTheme(g.theme);
+        if (g && g.best > G.best()) G.setBest(g.best);
+        $('rCode').value = $('rPin').value = '';
+        closeModal(recModal);
+        refreshBar();
+        push();
+        status('New PIN set. Signed in as ' + r.username + '. Other devices need the new PIN.', 'ok');
+      })
+      .catch(function (err) { recErr.textContent = (err && err.msg) || 'Could not reach the server. Try again.'; })
+      .then(function () { $('recGo').disabled = false; });
+  });
+
+  // ---- recovery email (signed in) ----
+  var emModal = $('emModal'), emErr = $('emErr');
+  $('emailBtn').addEventListener('click', function () {
+    this.blur();
+    emErr.textContent = '';
+    $('emIn').value = $('emPin').value = '';
+    $('emNow').textContent = 'Checking…';
+    openModal(emModal);
+    $('emIn').focus();
+    api('/me').then(function (r) {
+      $('emNow').textContent = r.email ? 'Saved: ' + r.email + '. Enter a new address to change it.' : 'No email saved yet. Add one so you can recover your PIN if you forget it.';
+    }).catch(function () { $('emNow').textContent = 'Add an email so you can recover your PIN if you forget it.'; });
+  });
+  $('emClose').addEventListener('click', function () { closeModal(emModal); });
+  $('emForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = $('emIn').value.trim(), pin = $('emPin').value.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { emErr.textContent = 'That email address does not look right'; return; }
+    if (!/^\d{6}$/.test(pin)) { emErr.textContent = 'Enter your 6-digit PIN to confirm'; return; }
+    if (!navigator.onLine) { emErr.textContent = 'You are offline. Connect to change your email.'; return; }
+    emErr.textContent = '';
+    $('emSave').disabled = true;
+    api('/auth/set-email', 'POST', { pin: pin, email: email })
+      .then(function (r) {
+        closeModal(emModal);
+        status(r.email ? 'Recovery email saved (' + r.email + ').' : 'Recovery email removed.', 'ok');
+      })
+      .catch(function (err) { emErr.textContent = (err && err.msg) || 'Could not reach the server. Try again.'; })
+      .then(function () { $('emSave').disabled = false; });
   });
 
   acctBtn.addEventListener('click', function () {
@@ -2188,11 +2332,11 @@ canvas {
   $('lbAll').addEventListener('click', function () { loadBoard('all'); });
   $('lbWeek').addEventListener('click', function () { loadBoard('week'); });
   $('lbClose').addEventListener('click', function () { closeModal(lbModal); });
-  [authModal, lbModal, pinModal].forEach(function (m) {
+  [authModal, lbModal, pinModal, recModal, emModal].forEach(function (m) {
     m.addEventListener('pointerdown', function (e) { if (e.target === m) closeModal(m); });
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { if (!authModal.hidden) closeModal(authModal); if (!lbModal.hidden) closeModal(lbModal); if (!pinModal.hidden) closeModal(pinModal); }
+    if (e.key === 'Escape') { if (!authModal.hidden) closeModal(authModal); if (!lbModal.hidden) closeModal(lbModal); if (!pinModal.hidden) closeModal(pinModal); if (!recModal.hidden) closeModal(recModal); if (!emModal.hidden) closeModal(emModal); }
   });
 
   window.SDSync = { push: push, gameOver: gameOver };

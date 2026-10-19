@@ -1,4 +1,4 @@
-import { players, boards, fail, json, currentUser, readBody, weekId, clamp, setupError, GAME_RE } from "../lib/core.mjs";
+import { players, boards, fail, json, currentUser, readBody, weekId, clamp, setupError, maskEmail, GAME_RE } from "../lib/core.mjs";
 
 const BOARD_SIZE = 100;
 
@@ -22,7 +22,7 @@ export default async (req) => {
   if (me.error) return fail(401, me.error);
   const { key, user } = me;
 
-  if (req.method === "GET") return json(200, { username: user.username, games: user.games || {} });
+  if (req.method === "GET") return json(200, { username: user.username, games: user.games || {}, email: maskEmail(user.email) });
   if (req.method !== "POST") return fail(405, "Use GET or POST");
 
   const { game = "", best = 0, theme = null, week = null, week_best = 0 } = await readBody(req);

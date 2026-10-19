@@ -59,7 +59,47 @@ export async function currentUser(req) {
   return { key: tok.sub, user };
 }
 
-export const userOut = (key, u) => ({ token: makeToken(key, u.tv || 0), username: u.username, games: u.games || {} });
+export const userOut = (key, u) => ({ token: makeToken(key, u.tv || 0), username: u.username, games: u.games || {}, email: maskEmail(u.email) });
+
+// ---- optional recovery email ----
+const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/;
+export const CODE_TTL_MS = 15 * 60 * 1000;   // a reset code works for 15 minutes
+export const CODE_GAP_MS = 60 * 1000;        // one email a minute per account
+export const CODE_DAY_MAX = 5;               // and five a day
+export const CODE_TRIES = 5;                 // five wrong guesses kills the code
+
+// "" means none, null means it does not look like an email, otherwise the cleaned address
+export function cleanEmail(raw) {
+  if (raw === undefined || raw === null || raw === "") return "";
+  if (typeof raw !== "string") return null;
+  const e = raw.trim().toLowerCase();
+  if (e === "") return "";
+  return e.length <= 254 && EMAIL_RE.test(e) ? e : null;
+}
+
+// p***@gmail.com, so the owner can see which address is saved without it being readable over a shoulder
+export function maskEmail(e) {
+  if (!e) return null;
+  const [u, dom] = e.split("@");
+  return `${u[0]}${"*".repeat(Math.max(2, Math.min(6, u.length - 1)))}@${dom}`;
+}
+
+export const newCode = () => String(crypto.randomInt(100000, 1000000));
+export const codeHash = (key, code) => crypto.createHmac("sha256", secret()).update(`reset:${key}:${code}`).digest("hex");
+export const sameHex = (a, b) => typeof a === "string" && typeof b === "string" && a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+
+// Recovery emails go through Resend. Without RESEND_API_KEY and RESEND_FROM set, recovery is simply switched off.
+export const mailer = {
+  enabled: () => !!(process.env.RESEND_API_KEY && process.env.RESEND_FROM),
+  async send(msg) {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: process.env.RESEND_FROM, to: [msg.to], subject: msg.subject, text: msg.text, html: msg.html }),
+    });
+    if (!r.ok) throw new Error(`Resend ${r.status}: ${await r.text()}`);
+  },
+};
 
 // returns an error Response, or null when the PIN is right (always saves fail counters)
 export async function checkPin(key, user, pin, wrongMsg) {
